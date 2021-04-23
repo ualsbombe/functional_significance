@@ -1,8 +1,9 @@
 rm(list = ls())
 
 
-filename <- 'lau_2021_04_12_105149_data.csv'
+# filename <- 'lau_2021_04_12_105149_data.csv'
 # filename <- 'lisbeth_2021_04_11_130622_data.csv'
+filename <- 'jordan_2021_04_16_100659_data.csv'
 filepath <- paste(getwd(), 'data', filename, sep='/')
 
 data <- read.table(filepath, header = TRUE, sep = ',')
@@ -58,6 +59,7 @@ false_alarm_rate <-
   sum(data$trial_type == 'omission', na.rm=TRUE)
 d_prime <- qnorm(hit_rate) - qnorm(false_alarm_rate)
 C <- -0.5 * (qnorm(hit_rate) + qnorm(false_alarm_rate))
+
 
 temp <- subset(data, data$jitter == '0 %')
 hit_rate_0 <- sum(temp$classification == 'hit', na.rm=TRUE) /
