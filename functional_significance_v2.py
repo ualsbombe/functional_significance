@@ -59,7 +59,8 @@ except:
     experiment_info = dict(subject='0001', test_fast=False, run_staircase=True,
                            run_detection=False, auto_respond=False,
                            target_current='staircased_value',
-                           performance_target=0.85, language='danish')
+                           performance_target=0.85, language='danish',
+                           present_feedback=True)
 
 ## add current_time
 now = datetime.now()
@@ -197,6 +198,8 @@ n_target_trials = 150 ## number of target trials per condition
 target_trial = 6 ## trial where target is presented
 non_target_current_factor = 1.5 ## multiply staircased current for non-targets
 n_breaks = 11 ## number of breaks during experiment
+response_table = dict(hit=0, miss=0, false_alarm=0, correct_rejection=0,
+                      correct=0, incorrect=0)
 
 ## trigger related (binaries)
 stim_trigger_value = 2**0 ## current generator
@@ -223,21 +226,42 @@ countdown_timer = CountdownTimer()
 
 #%% FUNCTIONS
 
+def reset_response_table_counters(response_table, All=False):
+    if All:
+        response_table = dict(hit=0, miss=0, false_alarm=0, correct_rejection=0,
+                      correct=0, incorrect=0)
+    else:
+        response_table['correct'] = 0
+        response_table['incorrect'] = 0
+        
+    return response_table
+
 def check_for_break(n_sequence, n_sequences, n_breaks, break_counter,
-                    break_text, language):
+                    break_text, language, response_table, present_feedback):
 
     experiment_progress = (n_sequence) // (n_sequences // (n_breaks + 1))
     if experiment_progress > break_counter:
+
+        accuracy = response_table['correct'] / \
+            (response_table['correct'] + response_table['incorrect'])
+        accuracy_string =  str(round(100 * accuracy)) + ' %'        
+
 
         if language == 'english':
             string = 'It is time for a short break\n' + \
                 'This is break no.: ' + str(break_counter + 1) + ' out of ' + \
                     str(n_breaks) + ' breaks.'
+            if present_feedback:
+                string += '\n\nFeedback:\nYou got ' + accuracy_string + \
+            ' correct during this session'
         elif language == 'danish':
             string = 'Nu holder vi en kort pause\n' + \
                 'Dette er pause nummer: ' + \
                     str(break_counter + 1) + ' ud af ' + \
                     str(n_breaks) + ' pauser.'
+            if present_feedback:
+                string += '\n\nFeedback:\nDu svarede rigtigt ' + \
+                    accuracy_string + ' af gangene.'
         break_text.setText(string)
         break_text.draw()
         window.flip()
@@ -245,11 +269,12 @@ def check_for_break(n_sequence, n_sequences, n_breaks, break_counter,
         print('Break number: ' + str(break_counter + 1) + ' out of ' + \
               str(n_breaks) + ' breaks.\nCheck with subject before ' + \
               'returning.\n(Press "return" to carry on)')
+        print(response_table)
+        response_table = reset_response_table_counters(response_table)
         input()
         window.flip()
-
         break_counter += 1
-    return break_counter
+    return break_counter, response_table
 
 def apply_jitter(jitter_proportion, ISI):
 
@@ -479,6 +504,25 @@ def present_response_options(window, stimulus, staircase=False):
 
     return this_response, response_time
 
+def categorize_responses(response, trigger_value, response_table):
+    if trigger_value == 144 or trigger_value == 160: ## omission
+        if response == 'yes':
+            categorization = 'false_alarm'
+        elif response == 'no':
+            categorization = 'correct_rejection'
+    elif trigger_value == 81 or trigger_value == 97:
+        if response == 'yes':
+            categorization = 'hit'
+        elif response == 'no':
+            categorization = 'miss'
+    response_table[categorization] += 1
+    if categorization == 'correct_rejection' or categorization == 'hit':
+        response_table['correct'] += 1
+    elif categorization == 'false_alarm' or categorization == 'miss':
+        response_table['incorrect'] += 1
+    
+    return response_table        
+    
 def present_instructions(window, text, text_dict, language):
     string = text_dict[language]
     text.setText(string)
@@ -516,10 +560,7 @@ def present_thank_you_screen(window, text, text_dict, language):
                 core.quit()
         event.clearEvents('mouse')
     window.flip()
-
-
-def present_feedback(): ## should we do this - maybe during practice
-    pass
+        
 
 def get_intensity_codes(code_filename):
     code_dict = dict()
@@ -830,9 +871,13 @@ present_instructions(window, instructions_text,
 experiment_begin_time = getTime()
 
 for n_sequence in range(n_sequences):
-    break_counter = check_for_break(n_sequence, n_sequences, n_breaks,
+    break_counter, response_table = \
+                                    check_for_break(n_sequence, n_sequences,
+                                    n_breaks,
                                     break_counter, instructions_text,
-                                    experiment_info['language'])
+                                    experiment_info['language'],
+                                    response_table,
+                                    experiment_info['present_feedback'])
     fixation.draw()
     window.flip()
     countdown_timer.reset(0.250)
@@ -899,9 +944,12 @@ for n_sequence in range(n_sequences):
             instructions_text.setText(text_dict['experiment_response'][experiment_info['language']])
             this_response, response_time = \
                 present_response_options(window, instructions_text)
+            response_table = categorize_responses(this_response, trigger_value,
+                                              response_table)    
         else:
             this_response = 'None'
             response_time = 'None'
+
         write_data_csv(data_filename, trigger_value, this_current,
                        this_response,
                        sequence_time, experiment_time,
