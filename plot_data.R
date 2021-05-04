@@ -3,7 +3,9 @@ rm(list = ls())
 
 # filename <- 'lau_2021_04_12_105149_data.csv'
 # filename <- 'lisbeth_2021_04_11_130622_data.csv'
-filename <- 'jordan_2021_04_16_100659_data.csv'
+# filename <- 'jordan_2021_04_16_100659_data.csv'
+filename <- 'james_2021_04_23_101736_data.csv'
+
 filepath <- paste(getwd(), 'data', filename, sep='/')
 
 data <- read.table(filepath, header = TRUE, sep = ',')
@@ -80,6 +82,7 @@ d_prime_15 <- qnorm(hit_rate_15) - qnorm(false_alarm_rate_15)
 C_15 <- -0.5 * (qnorm(hit_rate_15) + qnorm(false_alarm_rate_15))
 
 target_data <- subset(data, data$jitter != '')
+target_data$response_time <- as.numeric(as.character(target_data$response_time))
 target_data$correct <- ifelse(target_data$classification == 'hit' | 
            target_data$classification == 'correct_rejection', 1, 0)
 binomial_model_weak <- glm(correct ~ jitter, family='binomial',
@@ -90,3 +93,6 @@ binomial_model_omission <- glm(correct ~ jitter, family='binomial',
 
 binomial_model_collapse <- glm(correct ~ jitter, family='binomial',
                                data=target_data)
+
+response_time_model <- lm(log(response_time) ~ classification * jitter,
+                          data=target_data)

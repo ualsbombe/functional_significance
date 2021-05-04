@@ -3,6 +3,7 @@ rm(list = ls())
 filename <- 'lau_2021_04_12_105149_detection.csv'
 # filename <- 'lisbeth_2021_04_11_130622_detection.csv'
 filename <- 'jordan_2021_04_16_100659_detection.csv'
+filename <- 'james_2021_04_23_101736_detection.csv'
 
 filepath <- paste(getwd(), 'data', filename, sep='/')
 
