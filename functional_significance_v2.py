@@ -33,11 +33,13 @@ if user == b'lau\n': ## find name of meg stim computer
     send_triggers = False
     device_path = '/dev'
     window_size = (2400, 1300)
+    fullscr = False
 elif user == b'stimpc-08\n':
     from triggers import setParallelData ## only works at Skejby
     send_triggers = True
     device_path = '/dev'
-    window_size = (1900, 1000)
+    window_size = (1920, 1080)
+    fullscr = True
 else:
     raise NameError('The current user: ' + str(user) + \
                     ' has not been prepared')
@@ -173,7 +175,8 @@ for text_index, text in enumerate(text_dict):
 
 #%% CREATE WINDOW AND VISUAL STIMULI
 
-window = visual.Window(window_size, monitor='testMonitor', units='norm')
+window = visual.Window(window_size, monitor='testMonitor', units='norm',
+                       fullscr=fullscr)
 
 fixation = visual.TextStim(window, '+', pos=(0.0, 0.0))
 staircase_indicator_text = visual.TextStim(window, '', pos=(0.0, 0.0))
@@ -188,6 +191,7 @@ former_jitter_ISI = None
 
 ## fixed value parameters
 ISI  = 1.487 ## s
+# time_before_response = 1.000 ## s
 if experiment_info['test_fast']:
     ISI /= 1e3
 jitter_beginning_trial = 3 ## trial when jitter is introduced
@@ -196,7 +200,7 @@ condition_list = [('weak', 0.00), ('omission', 0.00),
 n_condition_repetition = 1
 n_target_trials = 150 ## number of target trials per condition
 target_trial = 6 ## trial where target is presented
-non_target_current_factor = 1.5 ## multiply staircased current for non-targets
+non_target_current_factor = 2.0 ## multiply staircased current for non-targets
 n_breaks = 11 ## number of breaks during experiment
 response_table = dict(hit=0, miss=0, false_alarm=0, correct_rejection=0,
                       correct=0, incorrect=0)
@@ -474,7 +478,7 @@ def trigger_current_generator(trigger_value, trigger_duration, ISI,
     return new_time
 
 
-def present_response_options(window, stimulus, staircase=False):
+def present_response_options(window, stimulus, staircase=False, suppress=False):
     ##FIXME resopnse triggers
     this_response = None
     if experiment_info['auto_respond']:
@@ -485,12 +489,12 @@ def present_response_options(window, stimulus, staircase=False):
     while this_response is None:
         all_keys = event.waitKeys()
         for this_key in all_keys:
-            if this_key == 'z' or this_key == '1':
+            if this_key == 'z' or this_key == '2':
                 if staircase:
                     this_response = 'first'
                 else:
                     this_response = 'yes'
-            elif this_key == 'm' or this_key == '2':
+            elif this_key == 'm' or this_key == '3':
                 if staircase:
                     this_response = 'second'
                 else:
@@ -535,7 +539,7 @@ def present_instructions(window, text, text_dict, language):
         all_keys = event.waitKeys()
         for this_key in all_keys:
             if this_key == 'z' or this_key == 'm' or \
-               this_key == '1' or this_key == '2':
+               this_key == '2' or this_key == '3':
                 this_response = 'continue'
             elif this_key == 'q':
                 window.close()
@@ -943,9 +947,10 @@ for n_sequence in range(n_sequences):
         if (n_trial + 1) == n_trials_sequence:
             instructions_text.setText(text_dict['experiment_response'][experiment_info['language']])
             this_response, response_time = \
-                present_response_options(window, instructions_text)
+                present_response_options(window, instructions_text,
+                                        suppress=True)
             response_table = categorize_responses(this_response, trigger_value,
-                                              response_table)    
+                                              response_table)
         else:
             this_response = 'None'
             response_time = 'None'
