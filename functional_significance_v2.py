@@ -59,9 +59,9 @@ try:
     experiment_info = misc.fromFile(parameter_file)
 except:
     experiment_info = dict(subject='0001', test_fast=False, run_staircase=True,
-                           run_detection=False, auto_respond=False,
+                           run_detection=True, auto_respond=False,
                            target_current='staircased_value',
-                           performance_target=0.85, language='danish',
+                           performance_target=0.90, language='danish',
                            present_feedback=True)
 
 ## add current_time
@@ -115,16 +115,16 @@ text_dict['experiment_thank_you'] = dict()
 
 english_texts = [
                 'When did you receive an electric shock?\n' + \
-                'Left: First time\n' + \
-                'Right: Second time',
+                'Up: First time\n' + \
+                'Down: Second time',
 
                 'Did you receive an electric shock?\n' + \
-                'Left: Yes\n' + \
-                'Right: No',
+                'Up: Yes\n' + \
+                'Down: No',
 
                 'Did you receive an electric shock?\n' + \
-                'Left: Yes\n' + \
-                'Right: No',
+                'Up: Yes\n' + \
+                'Down: No',
 
                 'The staircase session is about to begin:\n\n' + \
                 'Press a button to continue!',
@@ -142,16 +142,16 @@ english_texts = [
 
 danish_texts  = [
                 'Hvornår fik du stød?\n' + \
-                'Venstre: Første gang\n' + \
-                'Højre: Anden gang',
+                'Op: Første gang\n' + \
+                'Ned: Anden gang',
 
                 'Fik du stød?\n' + \
-                'Venstre: Ja\n' + \
-                'Højre: Nej',
+                'Op: Ja\n' + \
+                'Ned: Nej',
 
                 'Fik du stød?\n' + \
-                'Venstre: Ja\n' + \
-                'Højre: Nej',
+                'Op: Ja\n' + \
+                'Ned: Nej',
 
                 'Nu påbegyndes kalibreringssessionen:\n\n' + \
                 'Tryk på en knap for at fortsætte!',
@@ -191,7 +191,6 @@ former_jitter_ISI = None
 
 ## fixed value parameters
 ISI  = 1.487 ## s
-# time_before_response = 1.000 ## s
 if experiment_info['test_fast']:
     ISI /= 1e3
 jitter_beginning_trial = 3 ## trial when jitter is introduced
@@ -237,7 +236,7 @@ def reset_response_table_counters(response_table, All=False):
     else:
         response_table['correct'] = 0
         response_table['incorrect'] = 0
-        
+
     return response_table
 
 def check_for_break(n_sequence, n_sequences, n_breaks, break_counter,
@@ -248,7 +247,7 @@ def check_for_break(n_sequence, n_sequences, n_breaks, break_counter,
 
         accuracy = response_table['correct'] / \
             (response_table['correct'] + response_table['incorrect'])
-        accuracy_string =  str(round(100 * accuracy)) + ' %'        
+        accuracy_string =  str(round(100 * accuracy)) + ' %'
 
 
         if language == 'english':
@@ -275,7 +274,27 @@ def check_for_break(n_sequence, n_sequences, n_breaks, break_counter,
               'returning.\n(Press "return" to carry on)')
         print(response_table)
         response_table = reset_response_table_counters(response_table)
-        input()
+        this_response = None
+        if experiment_info['auto_respond']:
+            this_response = 'yes'
+        while this_response is None:
+            all_keys = event.waitKeys()
+            for this_key in all_keys:
+                if this_key == 'c' or this_key == '4':
+                    this_response = 'continue'
+        this_response = None
+        if experiment_info['auto_respond']:
+                this_response = 'yes'
+        while this_response is None:
+            all_keys = event.waitKeys()
+            for this_key in all_keys:
+                if this_key == 'z' or this_key == 'm' or \
+                   this_key == '1' or this_key == '2':
+                    this_response = 'continue'
+                elif this_key == 'q':
+                    window.close()
+                    core.quit()
+            event.clearEvents('mouse')
         window.flip()
         break_counter += 1
     return break_counter, response_table
@@ -483,18 +502,19 @@ def present_response_options(window, stimulus, staircase=False, suppress=False):
     this_response = None
     if experiment_info['auto_respond']:
         this_response = 'yes'
-    stimulus.draw()
-    window.flip()
+    if not suppress:
+        stimulus.draw()
+        window.flip()
     clock = MonotonicClock()
     while this_response is None:
         all_keys = event.waitKeys()
         for this_key in all_keys:
-            if this_key == 'z' or this_key == '2':
+            if this_key == 'z' or this_key == '1':
                 if staircase:
                     this_response = 'first'
                 else:
                     this_response = 'yes'
-            elif this_key == 'm' or this_key == '3':
+            elif this_key == 'm' or this_key == '2':
                 if staircase:
                     this_response = 'second'
                 else:
@@ -504,7 +524,8 @@ def present_response_options(window, stimulus, staircase=False, suppress=False):
                 core.quit()
         event.clearEvents('mouse')
     response_time = clock.getTime()
-    window.flip()
+    if not suppress:
+        window.flip()
 
     return this_response, response_time
 
@@ -524,9 +545,9 @@ def categorize_responses(response, trigger_value, response_table):
         response_table['correct'] += 1
     elif categorization == 'false_alarm' or categorization == 'miss':
         response_table['incorrect'] += 1
-    
-    return response_table        
-    
+
+    return response_table
+
 def present_instructions(window, text, text_dict, language):
     string = text_dict[language]
     text.setText(string)
@@ -538,8 +559,16 @@ def present_instructions(window, text, text_dict, language):
     while this_response is None:
         all_keys = event.waitKeys()
         for this_key in all_keys:
+            if this_key == 'c' or this_key == '4':
+                this_response = 'continue'
+    this_response = None
+    if experiment_info['auto_respond']:
+        this_response = 'yes'
+    while this_response is None:
+        all_keys = event.waitKeys()
+        for this_key in all_keys:
             if this_key == 'z' or this_key == 'm' or \
-               this_key == '2' or this_key == '3':
+               this_key == '1' or this_key == '2':
                 this_response = 'continue'
             elif this_key == 'q':
                 window.close()
@@ -564,7 +593,7 @@ def present_thank_you_screen(window, text, text_dict, language):
                 core.quit()
         event.clearEvents('mouse')
     window.flip()
-        
+
 
 def get_intensity_codes(code_filename):
     code_dict = dict()
