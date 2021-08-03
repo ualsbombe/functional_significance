@@ -58,7 +58,7 @@ parameter_file = 'staircase_parameters.pickle'
 try:
     experiment_info = misc.fromFile(parameter_file)
 except:
-    experiment_info = dict(subject='0001', test_fast=False, run_staircase=True,
+    experiment_info = dict(subject='test', test_fast=False, run_staircase=True,
                            run_detection=True, auto_respond=False,
                            target_current='staircased_value',
                            performance_target=0.90, language='danish',
@@ -802,7 +802,7 @@ def write_detection_csv(filename, current, this_trial_type, this_response,
 ## from the other functions FIXME: incorporate it into the rest of the script
 def run_detection_session(filename, current, intensity_codes, port_address,
                           n_trials, staircase, experiment_info, text_dict,
-                          response_text):
+                          response_text, response_table):
 
     language = experiment_info['language']
     string = text_dict[language]
@@ -841,11 +841,16 @@ np.round(staircase.estimateThreshold(experiment_info['performance_target']), 1)
 
         if this_trial_type == 'weak':
             port.write(b'?*A,S$C0#') # pulse
+            trigger_value = 81
         elif this_trial_type == 'omission':
-            pass
+            trigger_value = 144
 
         this_response, response_time = \
             present_response_options(window, response_text)
+        response_table = categorize_responses(this_response, trigger_value,
+                                              response_table)
+        print('Trial no.: ' + str(trial_index + 1) + ' of ' + str(n_trials))
+        print(response_table)
         countdown_timer.reset(ISI)
         while countdown_timer.getTime() > 0:
             pass
@@ -882,7 +887,9 @@ if experiment_info['run_detection']:
                         intensity_codes, port_address, n_trials=50,
                         staircase=staircase, experiment_info=experiment_info,
                         text_dict=text_dict['detection_response'],
-                        response_text=instructions_text)
+                        response_text=instructions_text,
+                        response_table=response_table)
+    response_table = reset_response_table_counters(response_table, All=True)
 
 #%% EXPERIMENT SESSION
 # should this be run with a single intensity, or adapt throughout?
